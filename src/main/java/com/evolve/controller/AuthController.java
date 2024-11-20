@@ -34,8 +34,8 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@RequestBody User user) {
-        logger.info("Получен запрос на вход для пользователя:" + user.getUsername());
-        User existingUser = userService.findByUsername(user.getUsername());
+        logger.info("Получен запрос на вход для пользователя:" + user.getEmail());
+        User existingUser = userService.findByEmail(user.getUsername());
         if (existingUser != null && passwordEncoder.matches(user.getPassword(), existingUser.getPassword())) {
             return ResponseEntity.ok(existingUser);
         } else {
