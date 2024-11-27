@@ -1,11 +1,11 @@
 package com.evolve.controller;
 
-import com.evolve.model.User;
+import com.evolve.dto.JwtAuthenticationDto;
+import com.evolve.dto.RefreshTokenDto;
+import com.evolve.dto.UserCredintialsDto;
 import com.evolve.service.UserService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,31 +15,34 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/auth")
 public class AuthController {
 
-    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
-
     private final UserService userService;
-    private final PasswordEncoder passwordEncoder;
 
-    public AuthController(UserService userService, PasswordEncoder passwordEncoder) {
+    public AuthController(UserService userService) {
         this.userService = userService;
-        this.passwordEncoder = passwordEncoder;
-    }
-
-    @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@RequestBody User user) {
-        logger.info("Получен запрос на регистрацию пользователя:" + user.getUsername());
-        User newUser = userService.registerNewUser(user);
-        return ResponseEntity.ok(newUser);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> loginUser(@RequestBody User user) {
-        logger.info("Получен запрос на вход для пользователя:" + user.getEmail());
-        User existingUser = userService.findByEmail(user.getUsername());
-        if (existingUser != null && passwordEncoder.matches(user.getPassword(), existingUser.getPassword())) {
-            return ResponseEntity.ok(existingUser);
-        } else {
-            return ResponseEntity.status(401).body("Invalid credentials");
+    public ResponseEntity<JwtAuthenticationDto> login(@RequestBody UserCredintialsDto userCredintialsDto) {
+        try {
+            JwtAuthenticationDto jwtAuthenticationDto = userService.signIn(userCredintialsDto);
+            return ResponseEntity.ok(jwtAuthenticationDto);
+        } catch (AuthenticationException e) {
+            throw new RuntimeException("Authentication failed" + e.getMessage());
+        }
+    }
+
+    @PostMapping("/refresh")
+    public JwtAuthenticationDto refresh(@RequestBody RefreshTokenDto refreshTokenDto) throws Exception {
+        return userService.refreshToken(refreshTokenDto);
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<JwtAuthenticationDto> register(@RequestBody UserCredintialsDto userCredintialsDto) {
+        try {
+            JwtAuthenticationDto jwtAuthenticationDto = userService.signUp(userCredintialsDto);
+            return ResponseEntity.ok(jwtAuthenticationDto);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(null);
         }
     }
 }
